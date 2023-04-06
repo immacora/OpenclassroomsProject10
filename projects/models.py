@@ -1,11 +1,10 @@
+import uuid
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
-import uuid
 from django.db import models
 
-
 class Project(models.Model):
-    """Project."""
+    """Projet."""
     PROJECT_TYPE = (
         (0, 'back-end'),
         (1, 'front-end'),
@@ -46,4 +45,3 @@ class Project(models.Model):
 
     def __str__(self):
         return self.title
-

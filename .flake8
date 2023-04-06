@@ -8,10 +8,10 @@ exclude=
 
     documentation/,
     venv/,
-    SoftDesk/users/migrations/,
-    SoftDesk/users/tests.py,
-    SoftDesk/projects/migrations/,
-    SoftDesk/projects/migrations/tests.py,
+    accounts/migrations/,
+    accounts/tests.py,
+    projects/migrations/,
+    projects/migrations/tests.py,
     
     README.md,
 
