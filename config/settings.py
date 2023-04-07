@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-hf43c$nq9b&_b+i(i$aa7dfb5ij05)bg=5ep$o$c1=5r784dkh'
+SECRET_KEY = 'django-insecure-75vlj-tvq0+w4bs6^hnns_#x_m(a!kprm-w75pvm)=ywf72!9@'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -38,31 +38,37 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # 3rd party
-    'rest_framework',
-    'corsheaders',
+    "rest_framework",
+    'rest_framework_simplejwt.token_blacklist',
     # Local
-    'users.apps.UsersConfig',
+    'accounts.apps.AccountsConfig',
     'projects.apps.ProjectsConfig',
     'apis.apps.ApisConfig',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-CORS_ALLOWED_ORIGINS = (
-    "http://localhost:8000",
-)
-
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8000"]
 
 ROOT_URLCONF = 'config.urls'
 
@@ -136,3 +142,11 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User
+# https://docs.djangoproject.com/fr/4.1/topics/auth/customizing/
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
+# Redirect
+LOGIN_REDIRECT_URL = 'projects'
+LOGOUT_REDIRECT_URL = 'projects'
