@@ -1,17 +1,17 @@
-import uuid
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
+import uuid
 from django.db import models
+
 
 class Project(models.Model):
     """Projet."""
-    PROJECT_TYPE = (
-        (0, 'back-end'),
-        (1, 'front-end'),
-        (2, 'iOS'),
-        (3, 'Android'),
-    )
-    id = models.UUIDField(
+    PROJECT_TYPE = [
+        ('BACK-END', 'Back-end'),
+        ('FRONT-END', 'Front-end'),
+        ('IOS', 'iOS'),
+        ('ANDROID', 'Android'),
+    ]
+    project_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False
@@ -24,24 +24,54 @@ class Project(models.Model):
         max_length=2048,
         blank=True
     )
-    type = models.PositiveSmallIntegerField(
+    type = models.CharField(
         'Type ',
-        default=0,
-        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        max_length=9,
         choices=PROJECT_TYPE,
     )
-    time_created = models.DateTimeField(
-        'Date de création',
-        auto_now_add=True
-    )
-    """contributor_user = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
+    contributors = models.ManyToManyField(
+        to=settings.AUTH_USER_MODEL,
         through='Contributor',
         related_name='contributions'
-    )"""
-
-    class Meta:
-        ordering = ["-time_created"]
+    )
 
     def __str__(self):
         return self.title
+
+
+class Contributor(models.Model):
+    """Contributeur."""
+    CONTRIBUTOR_PERMISSION = [
+        ('AUTHOR', 'Auteur'),
+        ('ASSIGNED', 'Assigné'),
+    ]
+    contributor_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    permission = models.CharField(
+        'Permission ',
+        max_length=8,
+        choices=CONTRIBUTOR_PERMISSION,
+    )
+    role = models.CharField(
+        'Rôle ',
+        max_length=128
+    )
+    user_id = models.ForeignKey(
+        to=settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        verbose_name='utilisateur',
+    )
+    project_id = models.ForeignKey(
+        to=Project,
+        on_delete=models.CASCADE,
+        verbose_name='projet',
+    )
+
+    class Meta:
+        unique_together = ('user_id', 'project_id')
+
+    def __str__(self):
+        return f"Contributeur {self.user_id.last_name} {self.user_id.first_name} au projet {self.project_id.title}"
