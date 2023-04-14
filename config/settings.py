@@ -160,5 +160,4 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'user_id',
-
 }
