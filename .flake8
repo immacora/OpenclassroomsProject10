@@ -11,7 +11,7 @@ exclude=
     accounts/migrations/,
     accounts/tests.py,
     projects/migrations/,
-    projects/migrations/tests.py,
+    projects/tests.py,
     
     README.md,
 
