@@ -30,7 +30,7 @@ class ProjectListAPIView(ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return user.project_contributor.all()
+        return user.project_contributors.all()
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)

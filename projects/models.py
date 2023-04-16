@@ -1,9 +1,10 @@
 from django.conf import settings
 import uuid
+from helpers.models import TrackingModel
 from django.db import models
 
 
-class Project(models.Model):
+class Project(TrackingModel):
     """Projet."""
     PROJECT_TYPE = [
         ('BACK-END', 'Back-end'),
@@ -32,14 +33,14 @@ class Project(models.Model):
     contributors = models.ManyToManyField(
         to=settings.AUTH_USER_MODEL,
         through='Contributor',
-        related_name='contributions'
+        related_name='project_contributors'
     )
 
     def __str__(self):
         return self.title
 
 
-class Contributor(models.Model):
+class Contributor(TrackingModel):
     """Contributeur."""
     CONTRIBUTOR_PERMISSION = [
         ('AUTHOR', 'Auteur'),
