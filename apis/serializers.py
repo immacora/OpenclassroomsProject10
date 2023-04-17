@@ -41,7 +41,20 @@ class SignupSerializer(serializers.ModelSerializer):
         return CustomUser.objects.create_user(**validated_data)
 
 
-class ProjectSerializer(serializers.ModelSerializer):
+class ProjectListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Project
+        fields = (
+            'created_at',
+            'updated_at',
+            'project_id',
+            'title',
+            'type'
+        )
+
+
+class ProjectDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
