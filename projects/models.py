@@ -72,7 +72,12 @@ class Contributor(TrackingModel):
     )
 
     class Meta:
+        """Interdit le doublon d'assignement d'un utilisateur au projet."""
         unique_together = ('user_id', 'project_id')
 
     def __str__(self):
         return f"Contributeur {self.user_id.last_name} {self.user_id.first_name} au projet {self.project_id.title}"
+
+    def is_author(self):
+        """Retourne True si le contributeur est l'auteur."""
+        return self.permission == "AUTHOR"
