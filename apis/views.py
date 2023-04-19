@@ -1,17 +1,19 @@
-from django.db.models import Q
+import datetime
 from django.contrib.auth import get_user_model
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from projects.permissions import IsProjectAuthorOrContributorReadOnly
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from projects.models import Project, Contributor
-from .serializers import SignupSerializer, ProjectSerializer#, ContributorSerializer#, CustomUserSerializer
+from .serializers import SignupSerializer, ProjectListSerializer, ProjectDetailSerializer#, ContributorSerializer, #CustomUserSerializer
 
 CustomUser = get_user_model()
 
 
 class SignupAPIView(CreateAPIView):
+    """Créer un compte CustomUser."""
     permission_classes = [AllowAny]
     serializer_class = SignupSerializer
 
@@ -25,8 +27,11 @@ class SignupAPIView(CreateAPIView):
 
 
 class ProjectListAPIView(ListCreateAPIView):
-    """Afficher la liste des projets auxquels l'utilisateur connecté contribue."""
-    serializer_class = ProjectSerializer
+    """
+    Afficher la liste des projets auxquels l'utilisateur connecté contribue.
+    Créer un projet en tant que contributeur-auteur (permission 'AUTHOR' et role 'Propriétaire').
+    """
+    serializer_class = ProjectListSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -49,5 +54,23 @@ class ProjectListAPIView(ListCreateAPIView):
 
 
 class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
+    """
+    Afficher le détail du projet auquel l'utilisateur connecté contribue.
+    Mettre à jour le projet (permission : auteur).
+    Supprimer le projet (permission : auteur).
+    """
     queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
+    serializer_class = ProjectDetailSerializer
+    permission_classes = [IsAuthenticated, IsProjectAuthorOrContributorReadOnly]
+
+    def put(self, request, *args, **kwargs):
+        project = self.get_object()
+        updated_at = datetime.datetime.now()
+        project.updated_at = updated_at
+        project.save()
+        return self.update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({'message': "Le projet a été supprimé"}, status=status.HTTP_200_OK)
