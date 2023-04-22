@@ -9,7 +9,7 @@ isalphavalidator = RegexValidator(
 
 
 isalphanumvalidator = RegexValidator(
-    r'^[0-9A-Za-záàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ._\s-]*$',
-    message="La saisie doit comporter uniquement des lettres avec trait d'union ou espace pour séparation et des chiffres.",
+    r'^[0-9A-Za-záàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ\'._\s-]*$',
+    message="La saisie doit comporter uniquement des lettres avec trait d'union, apostrophe ou espace pour séparation et des chiffres.",
     code='Saisie invalide'
     )

@@ -44,3 +44,8 @@ class CustomUser(PermissionsMixin, AbstractBaseUser):
 
     def __str__(self):
         return self.email
+    
+    def is_contributor(self, project):
+        if project in self.project_contributors.all():
+            return True
+        return False

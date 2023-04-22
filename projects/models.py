@@ -24,8 +24,7 @@ class Project(TrackingModel):
         max_length=128
     )
     description = models.TextField(
-        max_length=2048,
-        blank=True
+        max_length=2048
     )
     type = models.CharField(
         'Type ',
@@ -82,5 +81,5 @@ class Contributor(TrackingModel):
         return f"Contributeur {self.user_id.last_name} {self.user_id.first_name} au projet {self.project_id.title}"
 
     def is_author(self):
-        """Retourne True si le contributeur est l'auteur."""
+        """Retourne True si la permission du contributeur est auteur."""
         return self.permission == "AUTHOR"
