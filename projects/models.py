@@ -1,5 +1,6 @@
 from django.conf import settings
 import uuid
+from helpers.validators import isalphanumvalidator
 from helpers.models import TrackingModel
 from django.db import models
 
@@ -19,6 +20,7 @@ class Project(TrackingModel):
     )
     title = models.CharField(
         'Titre ',
+        validators=[isalphanumvalidator],
         max_length=128
     )
     description = models.TextField(
@@ -58,7 +60,8 @@ class Contributor(TrackingModel):
     )
     role = models.CharField(
         'Rôle ',
-        max_length=128
+        validators=[isalphanumvalidator],
+        max_length=128,
     )
     user_id = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,

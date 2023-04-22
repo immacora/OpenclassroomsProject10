@@ -1,23 +1,50 @@
 from rest_framework import permissions
-from django.http import Http404
-from projects.models import Contributor
+from projects.models import Project, Contributor
 
-BaseException
-class IsProjectAuthorOrContributorReadOnly(permissions.BasePermission):
-    """Autorise les SAFE_METHODS ('GET', 'HEAD', 'OPTIONS') au contributeur connecté et les méthodes PUT et DELETE au contributeur auteur ou au super utilisateur."""
+
+class IsProjectContributor(permissions.BasePermission):
+    """Autorise l'accès au contributeur connecté et au super utilisateur uniquement."""
+
+    def has_permission(self, request, view):
+        project_id = view.kwargs['project_id']
+        project = Project.objects.get(project_id=project_id)
+
+        if request.user.is_superuser:
+            return True
+
+        if (request.user.is_authenticated
+            and request.user.is_contributor(project)):
+            return True
+
+        return False
+
+
+class IsProjectAuthorOrReadOnlyContributor(permissions.BasePermission):
+    """Autorise le CRUD à l'auteur connecté du projet et au super utilisateur et les SAFE_METHODS ('GET', 'HEAD', 'OPTIONS') au contributeur connecté."""
+
     def has_permission(self, request, view):
         if request.user.is_authenticated:
             return True
         return False
+
     def has_object_permission(self, request, view, obj):
+        project_id = view.kwargs['project_id']
+        project = Project.objects.get(project_id=project_id)
+        
         if request.user.is_superuser:
             return True
+        
         try:
-            contributor = Contributor.objects.get(user_id=request.user, project_id=obj)
+            contributor = Contributor.objects.get(
+                user_id=request.user,
+                project_id=project_id)
         except Contributor.DoesNotExist:
-            raise Http404
+            return False
+        
         if contributor.is_author():
             return True
-        if obj in request.user.project_contributors.all() and request.method in permissions.SAFE_METHODS:
+        if (request.user.is_contributor(project)
+            and request.method in permissions.SAFE_METHODS):
             return True
+
         return False
