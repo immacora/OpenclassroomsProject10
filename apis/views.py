@@ -7,13 +7,14 @@ from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView
 
 from projects.models import Project, Contributor
-from .serializers import SignupSerializer, ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer
+from .serializers import SignupSerializer, ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer, CustomUserSerializer
 
 CustomUser = get_user_model()
 
 
 class SignupAPIView(CreateAPIView):
     """Créer un compte CustomUser."""
+
     permission_classes = [AllowAny]
     serializer_class = SignupSerializer
 
@@ -31,6 +32,7 @@ class ProjectListAPIView(ListCreateAPIView):
     Afficher la liste des projets auxquels l'utilisateur connecté contribue (permission: settings IsAuthenticated + filtre queryset).
     Créer un projet en tant que contributeur-auteur (permission 'AUTHOR' et role 'Propriétaire').
     """
+
     serializer_class = ProjectListSerializer
 
     def get_queryset(self):
@@ -59,6 +61,7 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
     Mettre à jour le projet (permission: auteur).
     Supprimer le projet (permission: auteur).
     """
+
     queryset = Project.objects.all()
     serializer_class = ProjectDetailSerializer
     lookup_field = 'project_id'
@@ -75,11 +78,12 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
 class ContributorsAPIView(ListCreateAPIView):
     """
     Afficher la liste des collaborateurs au projet (filtrage par project_id).
-    Ajouter un collaborateur-assigné (permission : auteur).
+    Ajouter un collaborateur-assigné s'il existe et n'est pas déjà rattaché au projet (permission : auteur).
     """
+
     serializer_class = ContributorSerializer
     permission_classes = [IsAuthenticated, IsProjectContributor, IsProjectAuthorOrReadOnlyContributor]
-    
+
     def list(self, request, *args, **kwargs):
         project_id = kwargs['project_id']
         queryset = Contributor.objects.filter(project_id=project_id)
@@ -111,15 +115,42 @@ class ContributorsAPIView(ListCreateAPIView):
             
             project = Project.objects.get(project_id=project_id)
 
-            try:
-                Contributor.objects.create(
+            contributor = Contributor.objects.create(
                 permission='ASSIGNED',
                 role=request.data['role'],
                 user_id=custom_user,
                 project_id=project
             )
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except Exception:
-                return Response({'message': "Une erreur s'est produite, l'utilisateur n'a pas été créé"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            json_contributor = ContributorSerializer(contributor)
+            json = {
+                'rôle': serializer.data,
+                'Contributeur': json_contributor.data,
+            }
+            return Response(json, status=status.HTTP_201_CREATED)
         
         return Response(status=status.HTTP_400_BAD_REQUEST, *args, **kwargs)
+
+
+class ContributorDeleteAPIView(DestroyAPIView):
+    """Supprimer un collaborateur (hors auteur, permission: auteur)."""
+
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
+    def delete(self, request, *args, **kwargs):
+        project_id = self.kwargs['project_id']
+        user_id = self.kwargs['user_id']
+        contributor_to_delete = Contributor.objects.get(user_id=user_id, project_id=project_id)
+
+        if contributor_to_delete:
+            requesting_user = Contributor.objects.get(user_id=self.request.user, project_id=project_id)
+
+            if not requesting_user.is_author():
+                return Response(status=status.HTTP_403_FORBIDDEN)
+            elif contributor_to_delete.is_author():
+                return Response({'message': "L'auteur du projet ne peut pas être supprimé."}, status=status.HTTP_403_FORBIDDEN)
+            else:
+                contributor_to_delete.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+
