@@ -33,7 +33,7 @@ class IsProjectAuthorOrReadOnlyContributor(permissions.BasePermission):
         
         if request.user.is_superuser:
             return True
-        
+
         try:
             contributor = Contributor.objects.get(
                 user_id=request.user,
@@ -43,6 +43,7 @@ class IsProjectAuthorOrReadOnlyContributor(permissions.BasePermission):
         
         if contributor.is_author():
             return True
+
         if (request.user.is_contributor(project)
             and request.method in permissions.SAFE_METHODS):
             return True

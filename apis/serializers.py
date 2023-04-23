@@ -69,16 +69,27 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         )
 
 
+class CustomUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CustomUser
+        fields = (
+            'user_id',
+            'email',
+            'first_name',
+            'last_name',
+            'date_joined',
+        )
+
 class ContributorSerializer(serializers.ModelSerializer):
+
+    user_id = CustomUserSerializer(read_only=True)
 
     class Meta:
         model = Contributor
         fields = (
             'created_at',
-            'updated_at',
             'contributor_id',
-            'permission',
             'role',
-            'user_id',
-            'project_id'
+            'user_id'
         )
