@@ -9,9 +9,7 @@ exclude=
     documentation/,
     venv/,
     accounts/migrations/,
-    accounts/tests.py,
     projects/migrations/,
-    projects/tests.py,
     
     README.md,
 

@@ -2,14 +2,14 @@ from django.core.validators import RegexValidator
 
 
 isalphavalidator = RegexValidator(
-    r'^[A-Za-záàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ._\s-]*$',
+    r'^[A-Za-záàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ._\ -]*$',
     message="La saisie doit comporter uniquement des lettres avec trait d'union ou espace pour séparation.",
     code='Saisie invalide'
     )
 
 
-isalphanumvalidator = RegexValidator(
-    r'^[0-9A-Za-záàâäãåçéèêëíìîïñóòôöõúùûüýÿæœÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸÆŒ\'._\s-]*$',
-    message="La saisie doit comporter uniquement des lettres avec trait d'union, apostrophe ou espace pour séparation et des chiffres.",
+ischarfieldvalidator = RegexValidator(
+    r'^[^&¤@=%<>#~`/§%=\^\$\\\|\{\}\[\]\+\*\.]*$',
+    message="La saisie ne doit pas comporter de caractères spéciaux.",
     code='Saisie invalide'
     )
