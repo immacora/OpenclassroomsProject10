@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from projects.models import Project, Contributor
+from projects.models import Project, Contributor, Issue
 
 CustomUser = get_user_model()
 
@@ -93,3 +93,40 @@ class ContributorSerializer(serializers.ModelSerializer):
             'role',
             'user_id'
         )
+
+
+class ProjectContributorsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Project
+        fields = (
+            'project_id',
+            'contributors'
+        )
+
+class IssuesSerializer(serializers.ModelSerializer):
+
+    author_user_id = serializers.UUIDField(
+        default=serializers.CurrentUserDefault()
+    )
+    assigned_user_id = serializers.UUIDField(
+        default=serializers.CurrentUserDefault()
+    )
+    project_id = ProjectContributorsSerializer(read_only=True)
+
+    class Meta:
+        model = Issue
+        fields = (
+            'created_at',
+            'updated_at',
+            'issue_id',
+            'title',
+            'description',
+            'tag',
+            'priority',
+            'status',
+            'author_user_id',
+            'project_id',
+            'assigned_user_id'
+        )
+        read_only_fields = ['author_user_id']
