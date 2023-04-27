@@ -1,13 +1,13 @@
 import datetime
 from django.contrib.auth import get_user_model
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from projects.permissions import IsProjectContributor, IsProjectAuthorOrReadOnlyContributor
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from projects.models import Project, Contributor
-from .serializers import SignupSerializer, ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer, CustomUserSerializer
+from projects.permissions import IsProjectContributor, IsProjectAuthorOrReadOnlyContributor
+from projects.models import Project, Contributor, Issue
+from .serializers import SignupSerializer, ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer, IssuesSerializer
 
 CustomUser = get_user_model()
 
@@ -78,7 +78,7 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
 class ContributorsAPIView(ListCreateAPIView):
     """
     Afficher la liste des collaborateurs au projet (filtrage par project_id).
-    Ajouter un collaborateur-assigné s'il existe et n'est pas déjà rattaché au projet (permission : auteur).
+    Ajouter un collaborateur-assigné si l'utilisateur existe et n'est pas déjà rattaché au projet (permission : auteur).
     """
 
     serializer_class = ContributorSerializer
@@ -114,7 +114,6 @@ class ContributorsAPIView(ListCreateAPIView):
                 return Response({'message': "L'utilisateur fait déjà partie des contributeurs."}, status=status.HTTP_409_CONFLICT)
             
             project = Project.objects.get(project_id=project_id)
-
             contributor = Contributor.objects.create(
                 permission='ASSIGNED',
                 role=request.data['role'],
@@ -132,14 +131,18 @@ class ContributorsAPIView(ListCreateAPIView):
 
 
 class ContributorDeleteAPIView(DestroyAPIView):
-    """Supprimer un collaborateur (hors auteur, permission: auteur)."""
+    """Supprimer un collaborateur (hors auteur, permission: contributeur filtré par project_id)."""
 
     permission_classes = [IsAuthenticated, IsProjectContributor]
 
     def delete(self, request, *args, **kwargs):
         project_id = self.kwargs['project_id']
         user_id = self.kwargs['user_id']
-        contributor_to_delete = Contributor.objects.get(user_id=user_id, project_id=project_id)
+
+        try:
+            contributor_to_delete = Contributor.objects.get(user_id=user_id, project_id=project_id)
+        except Contributor.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
         if contributor_to_delete:
             requesting_user = Contributor.objects.get(user_id=self.request.user, project_id=project_id)
@@ -154,3 +157,36 @@ class ContributorDeleteAPIView(DestroyAPIView):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
 
+class IssuesAPIView(ListCreateAPIView):
+    """
+    Afficher la liste des problèmes du projet (filtrage par project_id).
+    Créer un problème lié au projet si l'assigned_user_id est un contributeur (utilise la donnée assigned_user_id de contexte pour la création du problème ou celle du champ de saisie s'il existe, permission: contributeur filtré par project_id)
+    """
+
+    serializer_class = IssuesSerializer
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+    queryset = Issue.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.serializer_class(context={'request': request}, data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if self.perform_create(serializer) is False:
+            return Response({'message': "L'utilisateur ne fait pas partie des contributeurs"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        project_id = self.kwargs['project_id']
+        project = Project.objects.get(project_id=project_id)
+
+        if (assigned_user_id := self.request.data.get("assigned_user_id")):
+            assigned_user = CustomUser.objects.get(user_id=assigned_user_id)
+
+            if Contributor.objects.filter(user_id=assigned_user_id, project_id=project_id).exists():
+                serializer.save(project_id=project, assigned_user_id=assigned_user)
+                return Response(status=status.HTTP_201_CREATED)
+            else:
+                return False
+        serializer.save(project_id=project)

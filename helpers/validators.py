@@ -9,7 +9,7 @@ isalphavalidator = RegexValidator(
 
 
 ischarfieldvalidator = RegexValidator(
-    r'^[^&¤@=%<>#~`/§%=\^\$\\\|\{\}\[\]\+\*\.]*$',
+    r'^[^&¤@=%<>#~`/§%=\^\$\\\|\{\}\[\]\+\*]*$',
     message="La saisie ne doit pas comporter de caractères spéciaux.",
     code='Saisie invalide'
     )
