@@ -1,5 +1,6 @@
 import datetime
 from django.contrib.auth import get_user_model
+from django.http import Http404
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView
@@ -58,8 +59,8 @@ class ProjectListAPIView(ListCreateAPIView):
 class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
     """
     Afficher le détail du projet auquel l'utilisateur connecté contribue (filtrage: project_id).
-    Mettre à jour le projet (permission: auteur).
-    Supprimer le projet (permission: auteur).
+    Mettre à jour le projet (permission: auteur connecté).
+    Supprimer le projet (permission: auteur connecté).
     """
 
     queryset = Project.objects.all()
@@ -69,8 +70,7 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
 
     def put(self, request, *args, **kwargs):
         project = self.get_object()
-        updated_at = datetime.datetime.now()
-        project.updated_at = updated_at
+        project.updated_at = datetime.datetime.now()
         project.save()
         return self.update(request, *args, **kwargs)
 
@@ -78,7 +78,7 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
 class ContributorsAPIView(ListCreateAPIView):
     """
     Afficher la liste des collaborateurs au projet (filtrage par project_id).
-    Ajouter un collaborateur-assigné si l'utilisateur existe et n'est pas déjà rattaché au projet (permission : auteur).
+    Ajouter un collaborateur-assigné si l'utilisateur existe et n'est pas déjà rattaché au projet (permission : auteur connecté).
     """
 
     serializer_class = ContributorSerializer
@@ -131,7 +131,7 @@ class ContributorsAPIView(ListCreateAPIView):
 
 
 class ContributorDeleteAPIView(DestroyAPIView):
-    """Supprimer un collaborateur (hors auteur, permission: contributeur filtré par project_id)."""
+    """Supprimer un collaborateur (hors auteur, permission: contributeur connecté)."""
 
     permission_classes = [IsAuthenticated, IsProjectContributor]
 
@@ -160,7 +160,7 @@ class ContributorDeleteAPIView(DestroyAPIView):
 class IssuesAPIView(ListCreateAPIView):
     """
     Afficher la liste des problèmes du projet (filtrage par project_id).
-    Créer un problème lié au projet si l'assigned_user_id est un contributeur (utilise la donnée assigned_user_id de contexte pour la création du problème ou celle du champ de saisie s'il existe, permission: contributeur filtré par project_id)
+    Créer un problème lié au projet si l'assigned_user_id est un contributeur (utilise la donnée assigned_user_id de contexte pour la création du problème ou celle du champ de saisie s'il existe, permission: contributeur connecté)
     """
 
     serializer_class = IssuesSerializer
@@ -172,10 +172,10 @@ class IssuesAPIView(ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         if self.perform_create(serializer) is False:
-            return Response({'message': "L'utilisateur ne fait pas partie des contributeurs"}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response({'message': "L'utilisateur assigné ne fait pas partie des contributeurs"}, status=status.HTTP_404_NOT_FOUND)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         project_id = self.kwargs['project_id']
@@ -190,3 +190,54 @@ class IssuesAPIView(ListCreateAPIView):
             else:
                 return False
         serializer.save(project_id=project)
+
+
+class IssueAPIView(RetrieveUpdateDestroyAPIView):
+    """
+    Mettre à jour ou supprimer le problème récupéré par le get_object (author_user_id du problème lié au projet + permission: contributeur connecté).
+    """
+
+    serializer_class = IssuesSerializer
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
+    def get_object(self):
+        project_id = self.kwargs['project_id']
+        issue_id = self.kwargs['issue_id']
+
+        try:
+            obj = Issue.objects.get(author_user_id=self.request.user, project_id=project_id, issue_id=issue_id)
+            return obj
+        except Issue.DoesNotExist:
+            raise Http404()
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        if self.perform_update(serializer) is False:
+            return Response({'message': "L'utilisateur assigné ne fait pas partie des contributeurs"}, status=status.HTTP_404_NOT_FOUND)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        project_id = self.kwargs['project_id']
+        assigned_user_id = self.request.data.get("assigned_user_id", None)
+
+        if assigned_user_id:
+            try:
+                assigned_user = CustomUser.objects.get(user_id=assigned_user_id)
+                if Contributor.objects.filter(user_id=assigned_user_id, project_id=project_id).exists():
+                    serializer.save(assigned_user_id=assigned_user)
+                else:
+                    return False
+            except CustomUser.DoesNotExist:
+                return False
+        else:
+            serializer.save()

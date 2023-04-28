@@ -8,6 +8,7 @@ CustomUser = get_user_model()
 
 
 class SignupSerializer(serializers.ModelSerializer):
+    """Serializer utilisé pour l'inscription du customuser."""
 
     password = serializers.CharField(
         max_length=68,
@@ -42,6 +43,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
 
 class ProjectListSerializer(serializers.ModelSerializer):
+    """Serializer du projet intégrant les informations utiles à la logique métier (destiné à la vue de liste)."""
 
     class Meta:
         model = Project
@@ -55,6 +57,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
 
 
 class ProjectDetailSerializer(serializers.ModelSerializer):
+    """Serializer intégrant toutes les informations du projet (destiné à la vue de détail)."""
 
     class Meta:
         model = Project
@@ -70,6 +73,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
+    """Serializer du customuser intégrant les informations utiles à la logique métier (destiné au contributeur)."""
 
     class Meta:
         model = CustomUser
@@ -81,7 +85,9 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'date_joined',
         )
 
+
 class ContributorSerializer(serializers.ModelSerializer):
+    """Serializer du contributeur intégrant le détail de l'utilisateur pour la logique métier."""
 
     user_id = CustomUserSerializer(read_only=True)
 
@@ -96,6 +102,7 @@ class ContributorSerializer(serializers.ModelSerializer):
 
 
 class ProjectContributorsSerializer(serializers.ModelSerializer):
+    """Serializer du projet (id du projet et liste des id de ses contributeurs) à intégrer à la liste des problèmes pour la logique métier."""
 
     class Meta:
         model = Project
@@ -105,6 +112,12 @@ class ProjectContributorsSerializer(serializers.ModelSerializer):
         )
 
 class IssuesSerializer(serializers.ModelSerializer):
+    """
+    Serializer du problème à consulter / créer.
+    Assigne l'utilisateur-auteur par défaut (utilisateur connecté).
+    Utilise le ProjectContributorsSerializer (affichage des infos utiles du projet).
+    Assigne l'utilisateur-assigné par défaut (utilisateur connecté) si le champ de saisie est vide.
+    """
 
     author_user_id = serializers.UUIDField(
         default=serializers.CurrentUserDefault()
