@@ -9,6 +9,8 @@ from .views import (
     ContributorDeleteAPIView,
     IssuesAPIView,
     IssueAPIView,
+    CommentsAPIView,
+    CommentAPIView
 )
 
 urlpatterns = [
@@ -20,6 +22,6 @@ urlpatterns = [
     path('projects/<uuid:project_id>/users/<uuid:user_id>/', ContributorDeleteAPIView.as_view(), name='delete_contributor'),
     path('projects/<uuid:project_id>/issues/', IssuesAPIView.as_view(), name='issues'),
     path('projects/<uuid:project_id>/issues/<uuid:issue_id>/', IssueAPIView.as_view(), name='issue'),
-    #projects/<uuid:pk>/issues/<uuid:pk>/comments/
-    #projects/<uuid:pk>/issues/<uuid:pk>/comments/<uuid:pk>
+    path('projects/<uuid:project_id>/issues/<uuid:issue_id>/comments/', CommentsAPIView.as_view(), name='comments'),
+    path('projects/<uuid:project_id>/issues/<uuid:issue_id>/comments/<uuid:comment_id>/', CommentAPIView.as_view(), name='comment')
 ]
