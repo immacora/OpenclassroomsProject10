@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from projects.models import Project, Contributor, Issue
+from projects.models import Project, Contributor, Issue, Comment
 
 CustomUser = get_user_model()
 
@@ -36,14 +36,14 @@ class SignupSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"password": "Password fields didn't match."})
         return attrs
-    
+
     def create(self, validated_data):
         validated_data.pop("password2")
         return CustomUser.objects.create_user(**validated_data)
 
 
 class ProjectListSerializer(serializers.ModelSerializer):
-    """Serializer du projet intégrant les informations utiles à la logique métier (destiné à la vue de liste)."""
+    """Serializer du projet intégrant les informations minimales."""
 
     class Meta:
         model = Project
@@ -54,10 +54,11 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'title',
             'type'
         )
+        read_only__fields = ('project_id')
 
 
 class ProjectDetailSerializer(serializers.ModelSerializer):
-    """Serializer intégrant toutes les informations du projet (destiné à la vue de détail)."""
+    """Serializer intégrant toutes les informations du projet."""
 
     class Meta:
         model = Project
@@ -70,10 +71,11 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             'type',
             'contributors'
         )
+        read_only__fields = ('project_id')
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
-    """Serializer du customuser intégrant les informations utiles à la logique métier (destiné au contributeur)."""
+    """Serializer du customuser intégrant les informations minimales."""
 
     class Meta:
         model = CustomUser
@@ -87,7 +89,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 
 class ContributorSerializer(serializers.ModelSerializer):
-    """Serializer du contributeur intégrant le détail de l'utilisateur pour la logique métier."""
+    """Serializer du contributeur intégrant les informations minimales de l'utilisateur."""
 
     user_id = CustomUserSerializer(read_only=True)
 
@@ -102,7 +104,7 @@ class ContributorSerializer(serializers.ModelSerializer):
 
 
 class ProjectContributorsSerializer(serializers.ModelSerializer):
-    """Serializer du projet (id du projet et liste des id de ses contributeurs) à intégrer à la liste des problèmes pour la logique métier."""
+    """Serializer minimal du projet intégré aux problèmes."""
 
     class Meta:
         model = Project
@@ -111,11 +113,12 @@ class ProjectContributorsSerializer(serializers.ModelSerializer):
             'contributors'
         )
 
-class IssuesSerializer(serializers.ModelSerializer):
+
+class IssueSerializer(serializers.ModelSerializer):
     """
-    Serializer du problème à consulter / créer.
+    Serializer du problème.
     Assigne l'utilisateur-auteur par défaut (utilisateur connecté).
-    Utilise le ProjectContributorsSerializer (affichage des infos utiles du projet).
+    Utilise le ProjectContributorsSerializer (affichage des infos minimales du projet).
     Assigne l'utilisateur-assigné par défaut (utilisateur connecté) si le champ de saisie est vide.
     """
 
@@ -142,4 +145,46 @@ class IssuesSerializer(serializers.ModelSerializer):
             'project_id',
             'assigned_user_id'
         )
-        read_only_fields = ['author_user_id']
+        read_only_fields = ('issue_id', 'author_user_id')
+
+
+class CommentIssueSerializer(serializers.ModelSerializer):
+    """Serializer minimal du problème intégré aux commentaires."""
+
+    project_id = ProjectContributorsSerializer(read_only=True)
+    assigned_user_id = CustomUserSerializer(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = (
+            'issue_id',
+            'author_user_id',
+            'project_id',
+            'assigned_user_id'
+        )
+        read_only_fields = ('issue_id', 'author_user_id')
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    """
+    Serializer du commentaire.
+    Assigne l'utilisateur-auteur par défaut (utilisateur connecté).
+    Utilise le CommentIssueSerializer (affichage des infos minimales du problème).
+    """
+
+    author_user_id = serializers.UUIDField(
+        default=serializers.CurrentUserDefault()
+    )
+    issue_id = CommentIssueSerializer(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = (
+            'created_at',
+            'updated_at',
+            'comment_id',
+            'description',
+            'author_user_id',
+            'issue_id'
+        )
+        read_only_fields = ('comment_id', 'author_user_id')

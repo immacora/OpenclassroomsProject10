@@ -174,8 +174,10 @@ class Comment(TrackingModel):
     issue_id = models.ForeignKey(
         to=Issue,
         on_delete=models.CASCADE,
-        verbose_name='projet'
+        related_name="comment_issue_id",
+        verbose_name='problème'
     )
-    
+
     def __str__(self):
-        return f"Commentaire de {self.author_user_id.last_name} {self.author_user_id.first_name} au problème {self.issue_id.title}"
+        return f"Commentaire de {self.author_user_id.last_name} \
+            {self.author_user_id.first_name} au problème {self.issue_id.title}"
