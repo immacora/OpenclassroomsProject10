@@ -44,15 +44,15 @@ class IsProjectAuthorOrReadOnlyContributor(permissions.BasePermission):
         if contributor.is_author():
             return True
 
-        if (request.user.is_contributor(project)
-            and request.method in permissions.SAFE_METHODS):
+        if request.user.is_contributor(project) and request.method in permissions.SAFE_METHODS:
             return True
 
         return False
 
 
 class IsCommentAuthor(permissions.BasePermission):
-    """Autorise la modification et la suppression à l'auteur connecté du commentaire d'un problème et au super utilisateur."""
+    """Autorise la modification et la suppression à l'auteur connecté du commentaire d'un problème
+    et au super utilisateur."""
 
     def has_permission(self, request, view):
         if request.user.is_authenticated:

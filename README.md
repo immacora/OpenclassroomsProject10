@@ -19,6 +19,7 @@ L'authentification requise des utilisateurs de l'application, et l'appartenance 
   - Créer les migrations :
     * py manage.py makemigrations accounts
     * py manage.py makemigrations projects
+    * py manage.py migrate
 
 Pour générer un rapport flake8, saisir : flake8 --format=html --htmldir=flake-report
 

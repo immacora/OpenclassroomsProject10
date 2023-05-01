@@ -6,9 +6,16 @@ from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from projects.permissions import IsProjectContributor, IsProjectAuthorOrReadOnlyContributor
-from projects.models import Project, Contributor, Issue
-from .serializers import SignupSerializer, ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer, IssuesSerializer
+from projects.permissions import IsProjectContributor, IsProjectAuthorOrReadOnlyContributor, IsCommentAuthor
+from projects.models import Project, Contributor, Issue, Comment
+from .serializers import (
+    SignupSerializer,
+    ProjectListSerializer,
+    ProjectDetailSerializer,
+    ContributorSerializer,
+    IssueSerializer,
+    CommentSerializer
+    )
 
 CustomUser = get_user_model()
 
@@ -30,8 +37,10 @@ class SignupAPIView(CreateAPIView):
 
 class ProjectListAPIView(ListCreateAPIView):
     """
-    Afficher la liste des projets auxquels l'utilisateur connecté contribue (permission: settings IsAuthenticated + filtre queryset).
-    Créer un projet en tant que contributeur-auteur (permission 'AUTHOR' et role 'Propriétaire').
+    Afficher la liste des projets auxquels l'utilisateur connecté contribue
+    (permission: settings IsAuthenticated + queryset).
+    Créer un projet en tant que contributeur-auteur
+    (permission 'AUTHOR' et role 'Propriétaire').
     """
 
     serializer_class = ProjectListSerializer
@@ -52,7 +61,7 @@ class ProjectListAPIView(ListCreateAPIView):
                 project_id=project
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, *args, **kwargs)
 
 
@@ -63,10 +72,17 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
     Supprimer le projet (permission: auteur connecté).
     """
 
-    queryset = Project.objects.all()
     serializer_class = ProjectDetailSerializer
-    lookup_field = 'project_id'
     permission_classes = [IsAuthenticated, IsProjectContributor, IsProjectAuthorOrReadOnlyContributor]
+
+    def get_object(self):
+        project_id = self.kwargs['project_id']
+        try:
+            obj = Project.objects.get(project_id=project_id)
+            self.check_object_permissions(self.request, obj)
+            return obj
+        except Project.DoesNotExist:
+            raise Http404()
 
     def put(self, request, *args, **kwargs):
         project = self.get_object()
@@ -78,7 +94,8 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
 class ContributorsAPIView(ListCreateAPIView):
     """
     Afficher la liste des collaborateurs au projet (filtrage par project_id).
-    Ajouter un collaborateur-assigné si l'utilisateur existe et n'est pas déjà rattaché au projet (permission : auteur connecté).
+    Ajouter un collaborateur-assigné si l'utilisateur existe
+    et n'est pas déjà rattaché au projet (permission : auteur connecté).
     """
 
     serializer_class = ContributorSerializer
@@ -109,10 +126,13 @@ class ContributorsAPIView(ListCreateAPIView):
                 custom_user = CustomUser.objects.get(user_id=user_id)
             except Exception:
                 return Response({'message': "L'utilisateur n'a pas été trouvé"}, status=status.HTTP_404_NOT_FOUND)
-            
+
             if Contributor.objects.filter(user_id=user_id, project_id=project_id).exists():
-                return Response({'message': "L'utilisateur fait déjà partie des contributeurs."}, status=status.HTTP_409_CONFLICT)
-            
+                return Response(
+                    {'message': "L'utilisateur fait déjà partie des contributeurs."},
+                    status=status.HTTP_409_CONFLICT
+                )
+
             project = Project.objects.get(project_id=project_id)
             contributor = Contributor.objects.create(
                 permission='ASSIGNED',
@@ -126,7 +146,7 @@ class ContributorsAPIView(ListCreateAPIView):
                 'Contributeur': json_contributor.data,
             }
             return Response(json, status=status.HTTP_201_CREATED)
-        
+
         return Response(status=status.HTTP_400_BAD_REQUEST, *args, **kwargs)
 
 
@@ -150,7 +170,10 @@ class ContributorDeleteAPIView(DestroyAPIView):
             if not requesting_user.is_author():
                 return Response(status=status.HTTP_403_FORBIDDEN)
             elif contributor_to_delete.is_author():
-                return Response({'message': "L'auteur du projet ne peut pas être supprimé."}, status=status.HTTP_403_FORBIDDEN)
+                return Response(
+                    {'message': "L'auteur du projet ne peut pas être supprimé."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             else:
                 contributor_to_delete.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -160,10 +183,12 @@ class ContributorDeleteAPIView(DestroyAPIView):
 class IssuesAPIView(ListCreateAPIView):
     """
     Afficher la liste des problèmes du projet (filtrage par project_id).
-    Créer un problème lié au projet si l'assigned_user_id est un contributeur (utilise la donnée assigned_user_id de contexte pour la création du problème ou celle du champ de saisie s'il existe, permission: contributeur connecté)
+    Créer un problème lié au projet si l'assigned_user_id est un contributeur
+    (utilise la donnée assigned_user_id de contexte pour la création du problème
+    ou celle du champ de saisie s'il existe, permission: contributeur connecté)
     """
 
-    serializer_class = IssuesSerializer
+    serializer_class = IssueSerializer
     permission_classes = [IsAuthenticated, IsProjectContributor]
     queryset = Issue.objects.all()
 
@@ -172,7 +197,10 @@ class IssuesAPIView(ListCreateAPIView):
         serializer.is_valid(raise_exception=True)
 
         if self.perform_create(serializer) is False:
-            return Response({'message': "L'utilisateur assigné ne fait pas partie des contributeurs"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'message': "L'utilisateur assigné ne fait pas partie des contributeurs"},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -194,36 +222,33 @@ class IssuesAPIView(ListCreateAPIView):
 
 class IssueAPIView(RetrieveUpdateDestroyAPIView):
     """
-    Mettre à jour ou supprimer le problème récupéré par le get_object (author_user_id du problème lié au projet + permission: contributeur connecté).
+    Mettre à jour ou supprimer le problème récupéré par le get_object
+    (author du problème + permission: contributeur connecté).
     """
 
-    serializer_class = IssuesSerializer
+    serializer_class = IssueSerializer
     permission_classes = [IsAuthenticated, IsProjectContributor]
 
     def get_object(self):
         project_id = self.kwargs['project_id']
         issue_id = self.kwargs['issue_id']
-
         try:
             obj = Issue.objects.get(author_user_id=self.request.user, project_id=project_id, issue_id=issue_id)
+            self.check_object_permissions(self.request, obj)
             return obj
         except Issue.DoesNotExist:
             raise Http404()
-    
+
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
 
         if self.perform_update(serializer) is False:
-            return Response({'message': "L'utilisateur assigné ne fait pas partie des contributeurs"}, status=status.HTTP_404_NOT_FOUND)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
-            instance._prefetched_objects_cache = {}
-
+            return Response(
+                {'message': "L'utilisateur assigné ne fait pas partie des contributeurs"},
+                status=status.HTTP_404_NOT_FOUND
+            )
         return Response(serializer.data)
 
     def perform_update(self, serializer):
@@ -234,10 +259,63 @@ class IssueAPIView(RetrieveUpdateDestroyAPIView):
             try:
                 assigned_user = CustomUser.objects.get(user_id=assigned_user_id)
                 if Contributor.objects.filter(user_id=assigned_user_id, project_id=project_id).exists():
-                    serializer.save(assigned_user_id=assigned_user)
+                    serializer.save(assigned_user_id=assigned_user, updated_at=datetime.datetime.now())
                 else:
                     return False
             except CustomUser.DoesNotExist:
                 return False
         else:
-            serializer.save()
+            serializer.save(updated_at=datetime.datetime.now())
+
+
+class CommentsAPIView(ListCreateAPIView):
+    """
+    Afficher la liste des commentaires du problème.
+    Créer un commentaire sur un problème du projet (permission: contributeur connecté)
+    """
+
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
+    def list(self, request, *args, **kwargs):
+        issue_id = self.kwargs['issue_id']
+        queryset = Comment.objects.filter(issue_id=issue_id)
+
+        if not queryset:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        issue_id = self.kwargs['issue_id']
+        issue = Issue.objects.get(issue_id=issue_id)
+        serializer.save(author_user_id=self.request.user, issue_id=issue)
+
+
+class CommentAPIView(RetrieveUpdateDestroyAPIView):
+    """
+    Consulter, mettre à jour ou supprimer le commentaire du problème
+    récupéré par le get_object (comment_id + permission: contributeur connecté
+    et auteur du commentaire).
+    """
+
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated, IsProjectContributor, IsCommentAuthor]
+
+    def get_object(self):
+        comment_id = self.kwargs['comment_id']
+        try:
+            obj = Comment.objects.get(comment_id=comment_id)
+            self.check_object_permissions(self.request, obj)
+            return obj
+        except Comment.DoesNotExist:
+            raise Http404()
+
+    def perform_update(self, serializer):
+        serializer.save(updated_at=datetime.datetime.now())
