@@ -18,8 +18,10 @@ class CustomUser(PermissionsMixin, AbstractBaseUser):
     )
     email = models.EmailField(_("email address"), blank=False, unique=True)
     username = None
-    first_name = models.CharField(_("first name"), validators=[isalphavalidator], max_length=150, blank=False, null=False)
-    last_name = models.CharField(_("last name"), validators=[isalphavalidator], max_length=150, blank=False, null=False)
+    first_name = models.CharField(_("first name"), validators=[isalphavalidator],
+                                  max_length=150, blank=False, null=False)
+    last_name = models.CharField(_("last name"), validators=[isalphavalidator],
+                                 max_length=150, blank=False, null=False)
     is_staff = models.BooleanField(
         _("staff status"),
         default=False,
@@ -44,7 +46,7 @@ class CustomUser(PermissionsMixin, AbstractBaseUser):
 
     def __str__(self):
         return self.email
-    
+
     def is_contributor(self, project):
         if project in self.project_contributors.all():
             return True
