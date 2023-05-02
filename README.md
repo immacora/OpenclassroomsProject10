@@ -16,10 +16,6 @@ L'authentification requise des utilisateurs de l'application, et l'appartenance 
   - Créez l’environnement virtuel du projet : py -m venv venv
   - Activez l’environnement virtuel : venv\Scripts\activate
   - Installez les modules requis : pip install -r requirements.txt
-  - Créer les migrations :
-    * py manage.py makemigrations accounts
-    * py manage.py makemigrations projects
-    * py manage.py migrate
 
 Pour générer un rapport flake8, saisir : flake8 --format=html --htmldir=flake-report
 
