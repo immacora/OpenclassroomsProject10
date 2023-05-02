@@ -36,13 +36,6 @@ class IsProjectAuthorOrReadOnlyContributor(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
-        """try:
-            contributor = Contributor.objects.get(
-                user_id=request.user,
-                project_id=project_id)
-        except Contributor.DoesNotExist:
-            return False"""
-
         if contributor.is_author():
             return True
 
