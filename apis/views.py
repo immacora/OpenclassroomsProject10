@@ -1,6 +1,6 @@
 import datetime
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
-from django.http import Http404
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView, DestroyAPIView
@@ -52,12 +52,11 @@ class ProjectListAPIView(ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         serializer = ProjectDetailSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            user = request.user
             project = serializer.save()
             Contributor.objects.create(
                 permission='AUTHOR',
                 role='Propriétaire',
-                user_id=user,
+                user_id=request.user,
                 project_id=project
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -77,12 +76,9 @@ class ProjectDetailAPIView(RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         project_id = self.kwargs['project_id']
-        try:
-            obj = Project.objects.get(project_id=project_id)
-            self.check_object_permissions(self.request, obj)
-            return obj
-        except Project.DoesNotExist:
-            raise Http404()
+        obj = get_object_or_404(Project, project_id=project_id)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def put(self, request, *args, **kwargs):
         project = self.get_object()
@@ -232,12 +228,9 @@ class IssueAPIView(RetrieveUpdateDestroyAPIView):
     def get_object(self):
         project_id = self.kwargs['project_id']
         issue_id = self.kwargs['issue_id']
-        try:
-            obj = Issue.objects.get(author_user_id=self.request.user, project_id=project_id, issue_id=issue_id)
-            self.check_object_permissions(self.request, obj)
-            return obj
-        except Issue.DoesNotExist:
-            raise Http404()
+        obj = get_object_or_404(Issue, author_user_id=self.request.user, project_id=project_id, issue_id=issue_id)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -310,12 +303,9 @@ class CommentAPIView(RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         comment_id = self.kwargs['comment_id']
-        try:
-            obj = Comment.objects.get(comment_id=comment_id)
-            self.check_object_permissions(self.request, obj)
-            return obj
-        except Comment.DoesNotExist:
-            raise Http404()
+        obj = get_object_or_404(Comment, comment_id=comment_id)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def perform_update(self, serializer):
         serializer.save(updated_at=datetime.datetime.now())

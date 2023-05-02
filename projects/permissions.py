@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from projects.models import Project, Contributor, Comment
 
@@ -7,7 +8,7 @@ class IsProjectContributor(permissions.BasePermission):
 
     def has_permission(self, request, view):
         project_id = view.kwargs['project_id']
-        project = Project.objects.get(project_id=project_id)
+        project = get_object_or_404(Project, project_id=project_id)
 
         if request.user.is_superuser:
             return True
@@ -29,17 +30,18 @@ class IsProjectAuthorOrReadOnlyContributor(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         project_id = view.kwargs['project_id']
-        project = Project.objects.get(project_id=project_id)
+        project = get_object_or_404(Project, project_id=project_id)
+        contributor = get_object_or_404(Contributor, user_id=request.user, project_id=project_id)
 
         if request.user.is_superuser:
             return True
 
-        try:
+        """try:
             contributor = Contributor.objects.get(
                 user_id=request.user,
                 project_id=project_id)
         except Contributor.DoesNotExist:
-            return False
+            return False"""
 
         if contributor.is_author():
             return True
@@ -61,7 +63,7 @@ class IsCommentAuthor(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         comment_id = view.kwargs['comment_id']
-        comment = Comment.objects.get(comment_id=comment_id)
+        comment = get_object_or_404(Comment, comment_id=comment_id)
 
         if request.user.is_superuser:
             return True
