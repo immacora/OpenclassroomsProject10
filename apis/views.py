@@ -185,7 +185,18 @@ class IssuesAPIView(ListCreateAPIView):
 
     serializer_class = IssueSerializer
     permission_classes = [IsAuthenticated, IsProjectContributor]
-    queryset = Issue.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        project_id = kwargs['project_id']
+        queryset = Issue.objects.filter(project_id=project_id)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         serializer = self.serializer_class(context={'request': request}, data=request.data)
