@@ -122,7 +122,10 @@ class ContributorsAPIView(ListCreateAPIView):
                 user_id = request.data['user_id']['user_id']
                 custom_user = CustomUser.objects.get(user_id=user_id)
             except Exception:
-                return Response({'message': "Le champ contributeur est absent ou incorrectement renseigné."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'message': "Le champ contributeur est absent ou incorrectement renseigné."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
             if Contributor.objects.filter(user_id=user_id, project_id=project_id).exists():
                 return Response(
