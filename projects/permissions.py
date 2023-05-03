@@ -24,8 +24,16 @@ class IsProjectAuthorOrReadOnlyContributor(permissions.BasePermission):
     et les SAFE_METHODS ('GET', 'HEAD', 'OPTIONS') au contributeur connecté."""
 
     def has_permission(self, request, view):
-        if request.user.is_authenticated:
+        project_id = view.kwargs['project_id']
+        project = get_object_or_404(Project, project_id=project_id)
+        contributor = get_object_or_404(Contributor, user_id=request.user, project_id=project_id)
+
+        if contributor.is_author():
             return True
+
+        if request.user.is_contributor(project) and request.method in permissions.SAFE_METHODS:
+            return True
+
         return False
 
     def has_object_permission(self, request, view, obj):

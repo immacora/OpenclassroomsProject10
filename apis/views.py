@@ -115,13 +115,14 @@ class ContributorsAPIView(ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         project_id = kwargs['project_id']
-        user_id = request.data['user_id']['user_id']
 
         if serializer.is_valid(raise_exception=True):
+
             try:
+                user_id = request.data['user_id']['user_id']
                 custom_user = CustomUser.objects.get(user_id=user_id)
             except Exception:
-                return Response({'message': "L'utilisateur n'a pas été trouvé"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': "Le champ contributeur est absent ou incorrectement renseigné."}, status=status.HTTP_400_BAD_REQUEST)
 
             if Contributor.objects.filter(user_id=user_id, project_id=project_id).exists():
                 return Response(
