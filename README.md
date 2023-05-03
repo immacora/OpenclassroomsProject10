@@ -11,13 +11,13 @@ L'authentification requise des utilisateurs de l'application, et l'appartenance 
 
 ## Installation (Windows 11)
 
-  - Dans le répertoire souhaité, clonez le projet : git clone https://github.com/immacora/OpenclassroomsProject10.git
-  - Dirigez-vous dans le répertoire créé : cd OpenclassroomsProject10
-  - Créez l’environnement virtuel du projet : py -m venv venv
-  - Activez l’environnement virtuel : venv\Scripts\activate
-  - Installez les modules requis : pip install -r requirements.txt
+  - Dans le répertoire souhaité, clonez le projet : `git clone https://github.com/immacora/OpenclassroomsProject10.git`
+  - Dirigez-vous dans le répertoire créé : `cd OpenclassroomsProject10`
+  - Créez l’environnement virtuel du projet : `py -m venv venv`
+  - Activez l’environnement virtuel : `venv\Scripts\activate`
+  - Installez les modules requis : `pip install -r requirements.txt`
 
-Pour générer un rapport flake8, saisir : flake8 --format=html --htmldir=flake-report
+Pour générer un rapport flake8, saisir : `flake8 --format=html --htmldir=flake-report`
 
 ## Documentation Postman
 
