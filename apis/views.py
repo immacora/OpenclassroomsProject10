@@ -151,33 +151,28 @@ class ContributorsAPIView(ListCreateAPIView):
 
 
 class ContributorDeleteAPIView(DestroyAPIView):
-    """Supprimer un collaborateur (hors auteur, permission: contributeur connecté)."""
+    """Supprimer un collaborateur (hors auteur, permission: auteur connecté)."""
 
-    permission_classes = [IsAuthenticated, IsProjectContributor]
+    permission_classes = [IsAuthenticated, IsProjectContributor, IsProjectAuthorOrReadOnlyContributor]
 
-    def delete(self, request, *args, **kwargs):
+    def get_object(self):
         project_id = self.kwargs['project_id']
         user_id = self.kwargs['user_id']
+        obj = get_object_or_404(Contributor, user_id=user_id, project_id=project_id)
+        self.check_object_permissions(self.request, obj)
+        return obj
 
-        try:
-            contributor_to_delete = Contributor.objects.get(user_id=user_id, project_id=project_id)
-        except Contributor.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+    def delete(self, request, *args, **kwargs):
+        contributor_to_delete = self.get_object()
 
-        if contributor_to_delete:
-            requesting_user = Contributor.objects.get(user_id=self.request.user, project_id=project_id)
-
-            if not requesting_user.is_author():
-                return Response(status=status.HTTP_403_FORBIDDEN)
-            elif contributor_to_delete.is_author():
-                return Response(
-                    {'message': "L'auteur du projet ne peut pas être supprimé."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            else:
-                contributor_to_delete.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        if contributor_to_delete.is_author():
+            return Response(
+                {'message': "L'auteur du projet ne peut pas être supprimé."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        else:
+            contributor_to_delete.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class IssuesAPIView(ListCreateAPIView):
